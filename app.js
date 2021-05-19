@@ -11,7 +11,7 @@ const PORT = process.env.PORT || '5000';
 const server = express();
 
 const Logger = require('./src/services/logger_service');
-const routes = require('./src/routes');
+const routes = require('./src/routes/index');
 const logger = new Logger('server');
 
 server.use(cors());
