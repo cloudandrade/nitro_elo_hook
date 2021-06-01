@@ -12,7 +12,7 @@ class LoggerService {
 		this.route = route;
 		const logger = winston.createLogger({
 			transports: [
-				//new winston.transports.Console(),
+				new winston.transports.Console(),
 				new winston.transports.File({
 					filename: `./logs/${route}.log`,
 				}),

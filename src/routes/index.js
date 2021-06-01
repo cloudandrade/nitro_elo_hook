@@ -11,9 +11,7 @@ const logger = new Logger('requisitions');
 
 routes.get('/', async (req, res) => {
 	try {
-	
-
-		res.send({msg:"Hello! NitroEloHook Working!"});
+		res.send({ msg: 'Hello! NitroEloHook Working!' });
 	} catch (error) {
 		logger.error('falha ao computar atributos do servidor' + error);
 	}
@@ -78,7 +76,7 @@ async function getElos(summonerName, contractor, contractorHash) {
 
 					const pickValoElo = $('.valorant-highlighted-stat__value').html();
 
-					game2.name = 'League of Legends';
+					game2.name = 'Valorant';
 					game2.summoner = summonerName;
 					game2.elo = pickValoElo.trim();
 					elos.game2 = game2;
@@ -90,7 +88,5 @@ async function getElos(summonerName, contractor, contractorHash) {
 
 	return elos;
 }
-
-
 
 module.exports = routes;
