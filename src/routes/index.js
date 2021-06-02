@@ -22,115 +22,137 @@ routes.get('/', async (req, res) => {
 routes.get('/elos', async (req, res) => {
 	let { summoner, contractor, contractorHash } = req.query;
 
-
 	if (summoner) {
-		logger.debug(
-			`Foi requisitado elo do jogador: ${summoner} em League of Legends`
-		);
+		logger.debug(`Foi requisitado elo do jogador: ${summoner} em League of Legends`);
 	}
 	if (contractor) {
 		logger.debug(`Foi requisitado elo do jogador: ${contractor} em Valorant`);
 	}
-	
+
 	let response = {};
 	await getElos(summoner, contractor, contractorHash).then((elos) => {
-		
 		response = elos;
 		res.send(response);
 	});
 });
 
-//====================================SCRAPING ELO FUNCTION
-async function getElos(summonerName, contractor, contractorHash) {
-	let elos = {};
+//#######################################################################################
+//separando rotas por jogos  ------------------------------------------------------------
+//#######################################################################################
 
-	//se o invocador for passado por parametro ele irá buscar o elo
-	if (summonerName) {
-		let game1 = {};
-	
-			await axios
-				.get(`https://www.leagueofgraphs.com/pt/summoner/br/${summonerName}`)
-				.then((res) => {
-					console.log(res.status);
-					const $ = cheerio.load(res.data);
-					const pickLolElo = $('.leagueTier').html();
+//--> hook de league of legends --> scraping from leagueofgraphs
+routes.get('/lol', async (req, res) => {
+	let { name } = req.query;
+	let elo;
+	let erro;
 
-					game1.name = 'League of Legends';
-					game1.summoner = summonerName;
-					game1.elo = pickLolElo.trim();
-					elos.game1 = game1;
-				}).catch(error => {
-					switch (error.response.status) {
-						case 404:
-							logger.info("Player não encotrado. ".yellow + error.response.statusText);
-							game1.erro = "Player não encotrado";
-							elos.game1 = game1;
-							break;
-						case 500:
-							logger.error("Erro desconhecido no serviço de busca. " + error.response.statusText);
-							game1.erro = "Erro desconhecido no serviço de busca";
-							elos.game1 = game1;
-							break;
-						case 401:
-							logger.error("Busca não autorizada, usuário privado. ".yellow + error.response.statusText);
-							game1.erro = "Erro desconhecido no serviço de busca";
-							elos.game1 = game1;
-							break;
-						default:
-							logger.error("Erro não tratado. " + error);
-							game1.erro = "Erro desconhecido no serviço gateway";
-							elos.game1 = game1;
-							break;
-					}
-				});
-		
+	if (name) {
+		await axios
+			.get(`https://www.leagueofgraphs.com/pt/summoner/br/${name}`)
+			.then((resp) => {
+				console.log(resp.status);
+				const $ = cheerio.load(resp.data);
+				const pickLolElo = $('.leagueTier').html();
+				elo = pickLolElo.trim();
+				res.send(elo);
+			})
+			.catch((error) => {
+				console.log(error);
+				switch (error.response.status) {
+					case 404:
+						logger.info(
+							'Player não encotrado. '.yellow + error.response.statusText
+						);
+						erro = 'Player não encotrado';
+						res.send(erro);
+						break;
+					case 500:
+						logger.error(
+							'Erro desconhecido no serviço de busca. ' +
+								error.response.statusText
+						);
+						erro = 'Erro desconhecido no serviço de busca';
+						res.send(erro);
+						break;
+					case 401:
+						logger.error(
+							'Busca não autorizada, usuário privado. '.yellow +
+								error.response.statusText
+						);
+						erro = 'Erro desconhecido no serviço de busca';
+						res.send(erro);
+						break;
+					default:
+						logger.error('Erro não tratado. ' + error);
+						erro = 'Erro desconhecido no serviço gateway';
+						res.send(erro);
+						break;
+				}
+			});
+	} else {
+		res.send('Não existe jogador a ser buscado!');
 	}
+});
 
-	//se o contratante, ou seja, o jogador de valorant for passado, ele irá buscar o elo
-	if (contractor && contractorHash) {
-		let game2 = {};
-		
+//-->hook de valorant ---> scraping from tracker.gg
+routes.get('/valorant', async (req, res) => {
+	let { name, hash } = req.query;
+	let elo;
+	let erro;
+
+	if (name) {
+		if (hash) {
 			await axios
 				.get(
-					`https://tracker.gg/valorant/profile/riot/${contractor}%23${contractorHash}/overview?playlist=competitive`
+					`https://tracker.gg/valorant/profile/riot/${name}%23${hash}/overview?playlist=competitive`
 				)
-				.then((res) => {
-					const $ = cheerio.load(res.data);
+				.then((resp) => {
+					const $ = cheerio.load(resp.data);
 
 					const pickValoElo = $('.valorant-highlighted-stat__value').html();
 
-					game2.name = 'Valorant';
-					game2.summoner = summonerName;
-					game2.elo = pickValoElo.trim();
-					elos.game2 = game2;
-				}).catch(error => {
+					elo = pickValoElo.trim();
+					res.send(elo);
+				})
+				.catch((error) => {
 					switch (error.response.status) {
 						case 404:
-							logger.info("Player não encotrado. ".yellow + error.response.statusText);
-							game2.erro = "Player não encotrado";
-							elos.game2 = game2;
+							logger.info(
+								'Player não encotrado. '.yellow +
+									error.response.statusText
+							);
+							erro = 'Player não encotrado';
+							res.send(erro);
 							break;
 						case 500:
-							logger.error("Erro desconhecido no serviço de busca. " + error.response.statusText);
-							game2.erro = "Erro desconhecido no serviço de busca";
-							elos.game2 = game2;
+							logger.error(
+								'Erro desconhecido no serviço de busca. ' +
+									error.response.statusText
+							);
+							erro = 'Erro desconhecido no serviço de busca';
+							res.send(erro);
 							break;
 						case 401:
-							logger.error("Busca não autorizada, usuário privado. ".yellow + error.response.statusText);
-							game2.erro = "Erro desconhecido no serviço de busca";
-							elos.game2 = game2;
+							logger.error(
+								'Busca não autorizada, usuário privado. '.yellow +
+									error.response.statusText
+							);
+							erro = 'Erro desconhecido no serviço de busca';
+							res.send(erro);
 							break;
 						default:
-							logger.error("Erro não tratado. " + error);
-							game2.erro = "Erro desconhecido no serviço gateway";
-							elos.game2 = game2;
+							logger.error('Erro não tratado. ' + error);
+							erro = 'Erro desconhecido no serviço gateway';
+							res.send(erro);
 							break;
 					}
 				});
-	
+		} else {
+			res.send('Não é possível localizar um jogador sem o hash ID!');
+		}
+	} else {
+		res.send('Não existe jogador a ser buscado!');
 	}
-
-	return elos;
-}
+});
 
 module.exports = routes;
